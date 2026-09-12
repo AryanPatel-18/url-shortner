@@ -1,12 +1,16 @@
 package com.aryan.url_shortner.service.user;
 
+import com.aryan.url_shortner.dto.LoginRequest;
+import com.aryan.url_shortner.dto.RegisterUserRequest;
+import com.aryan.url_shortner.exceptions.InvalidCredentialsException;
+import com.aryan.url_shortner.exceptions.UserAlreadyExistsException;
 import com.aryan.url_shortner.exceptions.UserNotFoundException;
 import com.aryan.url_shortner.model.User;
 import com.aryan.url_shortner.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -14,6 +18,7 @@ import java.util.UUID;
 public class UserService implements IUserService{
 
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     public User getUser(UUID id) {
@@ -30,6 +35,38 @@ public class UserService implements IUserService{
     public boolean emailExists(String email) {
         return userRepository.existsByEmail(email);
     }
+
+    @Override
+    public User registerUser(RegisterUserRequest request) {
+        if (userRepository.existsByEmail(request.email())) {
+            throw new UserAlreadyExistsException("Email already registered");
+        }
+
+        User user = new User();
+        user.setEmail(request.email());
+        user.setPasswordHash(passwordEncoder.encode(request.password()));
+
+        return userRepository.save(user);
+
+    }
+
+    @Override
+    public User loginUser(LoginRequest request) {
+
+        User user = userRepository.findByEmail(request.email())
+                .orElseThrow(() ->
+                        new UserNotFoundException("User not found"));
+
+        if (!passwordEncoder.matches(
+                request.password(),
+                user.getPasswordHash())) {
+
+            throw new InvalidCredentialsException("Invalid password");
+        }
+
+        return user;
+    }
+
 
 
 }

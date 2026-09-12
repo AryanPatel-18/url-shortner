@@ -1,6 +1,7 @@
 package com.aryan.url_shortner.dto;
 
-public record RegisterRequest(
+
+public record RegisterUserRequest(
         String email,
         String password
 ) {

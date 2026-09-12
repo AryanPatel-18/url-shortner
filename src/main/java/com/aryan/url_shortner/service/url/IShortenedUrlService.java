@@ -11,5 +11,4 @@ public interface IShortenedUrlService {
     ShortenedUrl shortenUrl(String originalUrl);
     ShortenedUrl getByShortCode(String shortCode);
     void incrementClickCount(ShortenedUrl shortenedUrl);
-    UserUrl updateStatus(UUID userId, UUID urlId, String status);
 }
