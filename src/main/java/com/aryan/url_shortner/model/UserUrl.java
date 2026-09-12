@@ -8,29 +8,25 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(
-        name = "shortened_urls",
-        uniqueConstraints = {
-                @UniqueConstraint(name = "uk_original_url", columnNames = "original_url"),
-                @UniqueConstraint(name = "uk_short_code", columnNames = "short_code")
-        }
-)
+@Table(name = "user_urls")
 @Getter
 @Setter
-public class ShortenedUrl {
+public class UserUrl {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name = "original_url", nullable = false, columnDefinition = "TEXT")
-    private String originalUrl;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
-    @Column(name = "short_code", nullable = false, length = 20)
-    private String shortCode;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "url_id", nullable = false)
+    private ShortenedUrl shortenedUrl;
 
-    @Column(name = "click_count", nullable = false)
-    private long clickCount = 0;
+    @Column(name = "status", nullable = false)
+    private String status;
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;

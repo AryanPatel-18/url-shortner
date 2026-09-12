@@ -1,11 +1,15 @@
 package com.aryan.url_shortner.service.url;
 
 import com.aryan.url_shortner.model.ShortenedUrl;
+import com.aryan.url_shortner.model.UserUrl;
 
+import java.util.List;
 import java.util.UUID;
 
 public interface IShortenedUrlService {
-    public ShortenedUrl getById(UUID id);
-    public ShortenedUrl getByShortCode(String shortCode);
-    public boolean shortCodeExists(String shortCode);
+    ShortenedUrl getOrCreateShortenedUrl(String originalUrl);
+    ShortenedUrl shortenUrl(String originalUrl);
+    ShortenedUrl getByShortCode(String shortCode);
+    void incrementClickCount(ShortenedUrl shortenedUrl);
+    UserUrl updateStatus(UUID userId, UUID urlId, String status);
 }
