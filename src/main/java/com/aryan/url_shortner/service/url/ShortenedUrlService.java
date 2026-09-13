@@ -6,6 +6,7 @@ import com.aryan.url_shortner.model.ShortenedUrl;
 import com.aryan.url_shortner.model.UserUrl;
 import com.aryan.url_shortner.repository.ShortenedUrlRepository;
 import com.aryan.url_shortner.repository.UserUrlRepository;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -62,6 +63,7 @@ public class ShortenedUrlService implements IShortenedUrlService{
                 .orElseThrow(() -> new ShortenedUrlNotFoundException("Short URL not found"));
     }
 
+    @Transactional
     @Override
     public void incrementClickCount(ShortenedUrl shortenedUrl) {
         shortenedUrlRepository.incrementClickCount(shortenedUrl.getId());

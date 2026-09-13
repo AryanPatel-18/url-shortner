@@ -27,7 +27,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/api/" + apiVersion + "/users/register",
-                                "/api/" + apiVersion + "/users/login"
+                                "/api/" + apiVersion + "/users/login",
+                                "/{shortCode}",
+                                "/api/" + apiVersion + "/urls" // Temporarily added ( Remove later )
                         ).permitAll()
                         .anyRequest().authenticated()
                 );
