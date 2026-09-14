@@ -2,6 +2,7 @@ package com.aryan.url_shortner.controller;
 
 
 import com.aryan.url_shortner.dto.LoginRequest;
+import com.aryan.url_shortner.dto.LoginResponse;
 import com.aryan.url_shortner.dto.RegisterUserRequest;
 import com.aryan.url_shortner.dto.UserResponse;
 import com.aryan.url_shortner.model.User;
@@ -30,11 +31,7 @@ public class UserController {
     }
 
     @PostMapping("/login")
-    public UserResponse loginUser(@RequestBody LoginRequest request) {
-        User user = userService.loginUser(request);
-        return new UserResponse(
-                user.getId(),
-                user.getEmail()
-        );
+    public LoginResponse loginUser(@RequestBody LoginRequest request) {
+        return userService.loginUser(request);
     }
 }

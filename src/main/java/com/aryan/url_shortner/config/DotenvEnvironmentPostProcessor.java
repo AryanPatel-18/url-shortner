@@ -28,6 +28,8 @@ public class DotenvEnvironmentPostProcessor implements EnvironmentPostProcessor 
         properties.put("POSTGRES_DB", dotenv.get("POSTGRES_DB"));
         properties.put("POSTGRES_USER", dotenv.get("POSTGRES_USER"));
         properties.put("POSTGRES_PASSWORD", dotenv.get("POSTGRES_PASSWORD"));
+        properties.put("JWT_SECRET", dotenv.get("JWT_SECRET"));
+        properties.put("JWT_EXPIRATION", dotenv.get("JWT_EXPIRATION"));
 
         properties.put("REDIS_HOST", dotenv.get("REDIS_HOST"));
         properties.put("REDIS_PORT", dotenv.get("REDIS_PORT"));

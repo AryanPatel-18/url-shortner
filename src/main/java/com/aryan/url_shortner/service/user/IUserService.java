@@ -1,6 +1,7 @@
 package com.aryan.url_shortner.service.user;
 
 import com.aryan.url_shortner.dto.LoginRequest;
+import com.aryan.url_shortner.dto.LoginResponse;
 import com.aryan.url_shortner.dto.RegisterUserRequest;
 import com.aryan.url_shortner.model.User;
 
@@ -11,5 +12,5 @@ public interface IUserService {
     public User getUserByEmail(String email);
     public boolean emailExists(String email);
     public User registerUser(RegisterUserRequest request);
-    public User loginUser(LoginRequest request);
+    public LoginResponse loginUser(LoginRequest request);
 }
