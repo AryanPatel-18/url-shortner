@@ -1,5 +1,6 @@
 package com.aryan.url_shortner.model;
 
+import com.aryan.url_shortner.enums.UrlStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -32,6 +33,10 @@ public class ShortenedUrl {
     @Column(name = "click_count", nullable = false)
     private long clickCount = 0;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    private UrlStatus status;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
@@ -43,6 +48,7 @@ public class ShortenedUrl {
         LocalDateTime now = LocalDateTime.now();
         createdAt = now;
         updatedAt = now;
+        status = UrlStatus.ACTIVE;
     }
 
     @PreUpdate

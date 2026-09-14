@@ -1,6 +1,7 @@
 package com.aryan.url_shortner.controller;
 
 
+import com.aryan.url_shortner.enums.UrlStatus;
 import com.aryan.url_shortner.model.ShortenedUrl;
 import com.aryan.url_shortner.service.url.IShortenedUrlService;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,12 @@ public class RedirectController {
 
         ShortenedUrl shortenedUrl =
                 urlsService.getByShortCode(shortCode);
+
+        if (shortenedUrl.getStatus() != UrlStatus.ACTIVE) {
+            return ResponseEntity
+                    .status(HttpStatus.GONE)
+                    .build();
+        }
 
         urlsService.incrementClickCount(shortenedUrl);
 

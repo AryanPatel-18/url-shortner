@@ -25,9 +25,6 @@ public class UserUrl {
     @JoinColumn(name = "url_id", nullable = false)
     private ShortenedUrl shortenedUrl;
 
-    @Column(name = "status", nullable = false)
-    private String status;
-
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 

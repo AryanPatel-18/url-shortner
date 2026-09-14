@@ -1,5 +1,8 @@
 package com.aryan.url_shortner.service.userUrl;
 
+import com.aryan.url_shortner.dto.UserUrlResponse;
+import com.aryan.url_shortner.dto.UserUrlsResponse;
+import com.aryan.url_shortner.enums.UrlStatus;
 import com.aryan.url_shortner.model.ShortenedUrl;
 import com.aryan.url_shortner.model.UserUrl;
 
@@ -10,9 +13,13 @@ public interface IUserUrlService {
 
     UserUrl addUrlToUser(UUID userId, ShortenedUrl shortenedUrl);
 
-    List<UserUrl> getUserUrls(UUID userId);
-
-    UserUrl updateStatus(UUID userId, UUID urlId, String status);
+    UserUrlsResponse getUserUrls(UUID userId);
 
     void removeUserUrl(UUID userId, UUID urlId);
+
+    UserUrl createUserUrl(UUID userId, String originalUrl);
+
+    UserUrlResponse getUserUrl(UUID userId, UUID urlId);
+
+    UserUrl updateStatus(UUID userId, UUID urlId, UrlStatus status);
 }

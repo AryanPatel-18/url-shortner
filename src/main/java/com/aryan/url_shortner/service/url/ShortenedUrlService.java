@@ -6,6 +6,7 @@ import com.aryan.url_shortner.model.ShortenedUrl;
 import com.aryan.url_shortner.model.UserUrl;
 import com.aryan.url_shortner.repository.ShortenedUrlRepository;
 import com.aryan.url_shortner.repository.UserUrlRepository;
+import com.aryan.url_shortner.service.userUrl.UserUrlService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;

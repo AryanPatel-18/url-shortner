@@ -1,0 +1,5 @@
+ALTER TABLE shortened_urls
+    ADD COLUMN status VARCHAR(50) NOT NULL DEFAULT 'ACTIVE';
+
+ALTER TABLE user_urls
+DROP COLUMN status;

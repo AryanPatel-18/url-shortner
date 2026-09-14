@@ -11,4 +11,5 @@ public interface UserUrlRepository extends JpaRepository<UserUrl, Long> {
     Optional<UserUrl> findByUserIdAndShortenedUrlId(UUID userId, UUID urlId);
     List<UserUrl> findByUserId(UUID userId);
     boolean existsByUserIdAndShortenedUrlId(UUID userId, UUID urlId);
+    Optional<UserUrl> findByUserIdAndId(UUID userId, UUID id);
 }

@@ -27,3 +27,6 @@ test:
 
 clean:
 	./mvnw clean
+
+shell:
+	docker exec -it url-shortener-postgres psql -U postgres -d url_shortener

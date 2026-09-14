@@ -1,11 +1,16 @@
 package com.aryan.url_shortner.service.userUrl;
 
+import com.aryan.url_shortner.dto.UserUrlResponse;
+import com.aryan.url_shortner.dto.UserUrlsResponse;
+import com.aryan.url_shortner.enums.UrlStatus;
 import com.aryan.url_shortner.exceptions.UserUrlNotFoundException;
 import com.aryan.url_shortner.model.ShortenedUrl;
 import com.aryan.url_shortner.model.User;
 import com.aryan.url_shortner.model.UserUrl;
 import com.aryan.url_shortner.repository.UserUrlRepository;
+import com.aryan.url_shortner.service.url.IShortenedUrlService;
 import com.aryan.url_shortner.service.user.IUserService;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -19,6 +24,7 @@ public class UserUrlService implements IUserUrlService{
 
     private final UserUrlRepository userUrlRepository;
     private final IUserService userService;
+    private final IShortenedUrlService shortenedUrlService;
 
     @Override
     public UserUrl addUrlToUser(UUID userId, ShortenedUrl shortenedUrl) {
@@ -38,24 +44,38 @@ public class UserUrlService implements IUserUrlService{
         UserUrl userUrl = new UserUrl();
         userUrl.setUser(user);
         userUrl.setShortenedUrl(shortenedUrl);
-        userUrl.setStatus("ACTIVE");
 
         return userUrlRepository.save(userUrl);
     }
 
     @Override
-    public List<UserUrl> getUserUrls(UUID userId) {
-        return userUrlRepository.findByUserId(userId);
+    public UserUrlsResponse getUserUrls(UUID userId) {
+
+        List<UserUrlResponse> urls = userUrlRepository.findByUserId(userId)
+                .stream()
+                .map(userUrl -> new UserUrlResponse(
+                        userUrl.getId(),
+                        userUrl.getShortenedUrl().getOriginalUrl(),
+                        userUrl.getShortenedUrl().getShortCode(),
+                        userUrl.getShortenedUrl().getStatus(),
+                        userUrl.getShortenedUrl().getClickCount(),
+                        userUrl.getCreatedAt(),
+                        userUrl.getUpdatedAt()
+                ))
+                .toList();
+
+        return new UserUrlsResponse(urls);
     }
 
+    @Transactional
     @Override
-    public UserUrl updateStatus(UUID userId, UUID urlId, String status) {
+    public UserUrl updateStatus(UUID userId, UUID urlId, UrlStatus status) {
         UserUrl userUrl = userUrlRepository
-                .findByUserIdAndShortenedUrlId(userId, urlId)
+                .findByUserIdAndId(userId, urlId)
                 .orElseThrow(() ->
                         new UserUrlNotFoundException("User URL not found"));
 
-        userUrl.setStatus(status);
+        userUrl.getShortenedUrl().setStatus(status);
 
         return userUrlRepository.save(userUrl);
     }
@@ -64,9 +84,39 @@ public class UserUrlService implements IUserUrlService{
     public void removeUserUrl(UUID userId, UUID urlId) {
 
         UserUrl userUrl = userUrlRepository
-                .findByUserIdAndShortenedUrlId(userId, urlId)
-                .orElseThrow(() -> new UserUrlNotFoundException("URL not found for user"));
+                .findByUserIdAndId(userId, urlId)
+                .orElseThrow(() ->
+                        new UserUrlNotFoundException("URL not found for user"));
 
         userUrlRepository.delete(userUrl);
     }
+
+    @Override
+    public UserUrl createUserUrl(UUID userId, String originalUrl) {
+        ShortenedUrl shortenedUrl =
+                shortenedUrlService.getOrCreateShortenedUrl(originalUrl);
+
+        return addUrlToUser(userId, shortenedUrl);
+    }
+
+    @Override
+    public UserUrlResponse getUserUrl(UUID userId, UUID urlId) {
+
+        UserUrl userUrl = userUrlRepository
+                .findByUserIdAndId(userId, urlId)
+                .orElseThrow(() ->
+                        new UserUrlNotFoundException("URL not found for user"));
+
+        return new UserUrlResponse(
+                userUrl.getId(),
+                userUrl.getShortenedUrl().getOriginalUrl(),
+                userUrl.getShortenedUrl().getShortCode(),
+                userUrl.getShortenedUrl().getStatus(),
+                userUrl.getShortenedUrl().getClickCount(),
+                userUrl.getCreatedAt(),
+                userUrl.getUpdatedAt()
+        );
+    }
+
+
 }
