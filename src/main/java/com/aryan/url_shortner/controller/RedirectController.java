@@ -1,8 +1,8 @@
 package com.aryan.url_shortner.controller;
 
 
+import com.aryan.url_shortner.dto.RedirectCacheDTO;
 import com.aryan.url_shortner.enums.UrlStatus;
-import com.aryan.url_shortner.model.ShortenedUrl;
 import com.aryan.url_shortner.service.url.IShortenedUrlService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -23,20 +23,20 @@ public class RedirectController {
     public ResponseEntity<Void> redirect(
             @PathVariable String shortCode) {
 
-        ShortenedUrl shortenedUrl =
+        RedirectCacheDTO url =
                 urlsService.getByShortCode(shortCode);
 
-        if (shortenedUrl.getStatus() != UrlStatus.ACTIVE) {
+        if (url.status() != UrlStatus.ACTIVE) {
             return ResponseEntity
                     .status(HttpStatus.GONE)
                     .build();
         }
 
-        urlsService.incrementClickCount(shortenedUrl);
+        urlsService.incrementClickCount(url.id());
 
         return ResponseEntity
                 .status(HttpStatus.FOUND)
-                .location(URI.create(shortenedUrl.getOriginalUrl()))
+                .location(URI.create(url.originalUrl()))
                 .build();
     }
 }
