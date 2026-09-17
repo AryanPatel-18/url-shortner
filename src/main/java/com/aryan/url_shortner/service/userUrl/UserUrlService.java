@@ -12,10 +12,19 @@ import com.aryan.url_shortner.service.url.IShortenedUrlService;
 import com.aryan.url_shortner.service.user.IUserService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -25,6 +34,8 @@ public class UserUrlService implements IUserUrlService{
     private final UserUrlRepository userUrlRepository;
     private final IUserService userService;
     private final IShortenedUrlService shortenedUrlService;
+    private final StringRedisTemplate redisTemplate;
+    private final ObjectMapper objectMapper;
 
     @Override
     public UserUrl addUrlToUser(UUID userId, ShortenedUrl shortenedUrl) {
@@ -45,13 +56,36 @@ public class UserUrlService implements IUserUrlService{
         userUrl.setUser(user);
         userUrl.setShortenedUrl(shortenedUrl);
 
+        clearUserUrlsCache(userId);
         return userUrlRepository.save(userUrl);
     }
 
     @Override
-    public UserUrlsResponse getUserUrls(UUID userId) {
+    public UserUrlsResponse getUserUrls(UUID userId, int page, int size) {
 
-        List<UserUrlResponse> urls = userUrlRepository.findByUserId(userId)
+        String key = "user:urls:" + userId + ":page:" + page + ":size:" + size;
+
+        String cachedValue = redisTemplate.opsForValue().get(key);
+
+        if (cachedValue != null) {
+            try {
+                return objectMapper.readValue(
+                        cachedValue,
+                        UserUrlsResponse.class
+                );
+            } catch (JacksonException ignored) {
+                // Invalid cache entry, fall back to database
+            }
+        }
+
+        Pageable pageable = PageRequest.of(
+                page,
+                size,
+                Sort.by(Sort.Direction.DESC, "createdAt")
+        );
+
+        List<UserUrlResponse> urls = userUrlRepository
+                .findByUserIdWithShortenedUrl(userId, pageable)
                 .stream()
                 .map(userUrl -> new UserUrlResponse(
                         userUrl.getId(),
@@ -64,7 +98,21 @@ public class UserUrlService implements IUserUrlService{
                 ))
                 .toList();
 
-        return new UserUrlsResponse(urls);
+        UserUrlsResponse response = new UserUrlsResponse(urls);
+
+        try {
+            String cacheData = objectMapper.writeValueAsString(response);
+
+            redisTemplate.opsForValue().set(
+                    key,
+                    cacheData,
+                    Duration.ofMinutes(2)
+            );
+        } catch (JacksonException ignored) {
+            // Cache failure should not affect the response
+        }
+
+        return response;
     }
 
     @Transactional
@@ -76,7 +124,7 @@ public class UserUrlService implements IUserUrlService{
                         new UserUrlNotFoundException("User URL not found"));
 
         userUrl.getShortenedUrl().setStatus(status);
-
+        clearUserUrlsCache(userId);
         return userUrlRepository.save(userUrl);
     }
 
@@ -87,7 +135,7 @@ public class UserUrlService implements IUserUrlService{
                 .findByUserIdAndId(userId, urlId)
                 .orElseThrow(() ->
                         new UserUrlNotFoundException("URL not found for user"));
-
+        clearUserUrlsCache(userId);
         userUrlRepository.delete(userUrl);
     }
 
@@ -95,7 +143,6 @@ public class UserUrlService implements IUserUrlService{
     public UserUrl createUserUrl(UUID userId, String originalUrl) {
         ShortenedUrl shortenedUrl =
                 shortenedUrlService.getOrCreateShortenedUrl(originalUrl);
-
         return addUrlToUser(userId, shortenedUrl);
     }
 
@@ -118,5 +165,14 @@ public class UserUrlService implements IUserUrlService{
         );
     }
 
+    private void clearUserUrlsCache(UUID userId) {
+        String pattern = "user:urls:" + userId + ":page:*";
+
+        Set<String> keys = redisTemplate.keys(pattern);
+
+        if (keys != null && !keys.isEmpty()) {
+            redisTemplate.delete(keys);
+        }
+    }
 
 }

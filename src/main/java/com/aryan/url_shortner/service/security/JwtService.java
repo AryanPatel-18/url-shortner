@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
+import java.util.UUID;
 
 @Service
 public class JwtService implements IJwtService{
@@ -22,8 +23,12 @@ public class JwtService implements IJwtService{
 
     @Override
     public String generateToken(UserDetails userDetails) {
+        // Cast to our custom implementation to get access to the User object
+        com.aryan.url_shortner.model.CustomUserDetails customUser =
+                (com.aryan.url_shortner.model.CustomUserDetails) userDetails;
         return Jwts.builder()
                 .subject(userDetails.getUsername())
+                .claim("userId", customUser.getUser().getId().toString())
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + jwtExpiration))
                 .signWith(getSigningKey())
@@ -42,12 +47,21 @@ public class JwtService implements IJwtService{
     }
 
     @Override
-    public boolean isTokenValid(String token, UserDetails userDetails) {
+    public UUID extractUserId(String token) {
+        String userIdStr = extractAllClaims(token).get("userId", String.class);
+        if (userIdStr == null || userIdStr.isBlank()) {
+            throw new IllegalArgumentException("User ID not found in JWT");
+        }
+        return UUID.fromString(userIdStr);
+    }
 
-        String username = extractUsername(token);
-
-        return username.equals(userDetails.getUsername())
-                && !isTokenExpired(token);
+    @Override
+    public boolean isTokenValid(String token) {
+        try {
+            return !extractAllClaims(token).getExpiration().before(new Date());
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private boolean isTokenExpired(String token) {

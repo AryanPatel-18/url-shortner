@@ -1,6 +1,5 @@
-package com.aryan.url_shortner.service.security;
+package com.aryan.url_shortner.model;
 
-import com.aryan.url_shortner.model.User;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 

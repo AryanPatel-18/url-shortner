@@ -3,16 +3,13 @@ import com.aryan.url_shortner.dto.*;
 import com.aryan.url_shortner.model.ShortenedUrl;
 import com.aryan.url_shortner.model.User;
 import com.aryan.url_shortner.model.UserUrl;
-import com.aryan.url_shortner.service.security.CustomUserDetails;
-import com.aryan.url_shortner.service.url.IShortenedUrlService;
+import com.aryan.url_shortner.model.CustomUserDetails;
 import com.aryan.url_shortner.service.userUrl.IUserUrlService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import java.net.URI;
 import java.util.UUID;
 
 @RestController
@@ -45,13 +42,20 @@ public class UrlController<IUrlService> {
     }
 
     @GetMapping
-    public UserUrlsResponse getUserUrls(
-            Authentication authentication
+    public ResponseEntity<UserUrlsResponse> getUserUrls(
+            Authentication authentication,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
     ) {
+        if (page < 0 || size < 1 || size > 20) {
+            return ResponseEntity.badRequest().build();
+        }
 
         User user = getAuthenticatedUser(authentication);
 
-        return userUrlService.getUserUrls(user.getId());
+        return ResponseEntity.ok(
+                userUrlService.getUserUrls(user.getId(), page, size)
+        );
     }
 
     @DeleteMapping

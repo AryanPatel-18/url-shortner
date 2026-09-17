@@ -13,7 +13,7 @@ public interface IUserUrlService {
 
     UserUrl addUrlToUser(UUID userId, ShortenedUrl shortenedUrl);
 
-    UserUrlsResponse getUserUrls(UUID userId);
+    UserUrlsResponse getUserUrls(UUID userId, int page, int size);
 
     void removeUserUrl(UUID userId, UUID urlId);
 

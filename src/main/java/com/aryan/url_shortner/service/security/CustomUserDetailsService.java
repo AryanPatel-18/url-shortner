@@ -1,5 +1,6 @@
 package com.aryan.url_shortner.service.security;
 
+import com.aryan.url_shortner.model.CustomUserDetails;
 import com.aryan.url_shortner.model.User;
 import com.aryan.url_shortner.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
