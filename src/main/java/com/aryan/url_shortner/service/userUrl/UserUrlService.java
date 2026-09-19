@@ -7,6 +7,7 @@ import com.aryan.url_shortner.exceptions.UserUrlNotFoundException;
 import com.aryan.url_shortner.model.ShortenedUrl;
 import com.aryan.url_shortner.model.User;
 import com.aryan.url_shortner.model.UserUrl;
+import com.aryan.url_shortner.repository.UserRepository;
 import com.aryan.url_shortner.repository.UserUrlRepository;
 import com.aryan.url_shortner.service.url.IShortenedUrlService;
 import com.aryan.url_shortner.service.user.IUserService;
@@ -32,6 +33,7 @@ import java.util.UUID;
 public class UserUrlService implements IUserUrlService{
 
     private final UserUrlRepository userUrlRepository;
+    private final UserRepository userRepository;
     private final IUserService userService;
     private final IShortenedUrlService shortenedUrlService;
     private final StringRedisTemplate redisTemplate;
@@ -39,23 +41,21 @@ public class UserUrlService implements IUserUrlService{
 
     @Override
     public UserUrl addUrlToUser(UUID userId, ShortenedUrl shortenedUrl) {
-
         Optional<UserUrl> existing = userUrlRepository
                 .findByUserIdAndShortenedUrlId(
                         userId,
                         shortenedUrl.getId()
                 );
-
         if (existing.isPresent()) {
-            return existing.get();
+            UserUrl userUrl = existing.get();
+            userUrl.setShortenedUrl(shortenedUrl);
+            return userUrl;
         }
 
-        User user = userService.getUser(userId);
-
+        User user = userRepository.getReferenceById(userId);
         UserUrl userUrl = new UserUrl();
         userUrl.setUser(user);
         userUrl.setShortenedUrl(shortenedUrl);
-
         clearUserUrlsCache(userId);
         return userUrlRepository.save(userUrl);
     }
@@ -63,7 +63,8 @@ public class UserUrlService implements IUserUrlService{
     @Override
     public UserUrlsResponse getUserUrls(UUID userId, int page, int size) {
 
-        String key = "user:urls:" + userId + ":page:" + page + ":size:" + size;
+        long cacheVersion = getCacheVersion(userId);
+        String key = "user:urls:" + userId + ":v:" + cacheVersion + ":page:" + page + ":size:" + size;
 
         String cachedValue = redisTemplate.opsForValue().get(key);
 
@@ -124,6 +125,7 @@ public class UserUrlService implements IUserUrlService{
                         new UserUrlNotFoundException("User URL not found"));
 
         userUrl.getShortenedUrl().setStatus(status);
+        shortenedUrlService.invalidateRedirectCache(userUrl.getShortenedUrl().getShortCode());
         clearUserUrlsCache(userId);
         return userUrlRepository.save(userUrl);
     }
@@ -165,14 +167,16 @@ public class UserUrlService implements IUserUrlService{
         );
     }
 
+    private long getCacheVersion(UUID userId) {
+        String versionKey = "user:cache_version:" + userId;
+        String version = redisTemplate.opsForValue().get(versionKey);
+        return version != null ? Long.parseLong(version) : 0L;
+    }
+
     private void clearUserUrlsCache(UUID userId) {
-        String pattern = "user:urls:" + userId + ":page:*";
-
-        Set<String> keys = redisTemplate.keys(pattern);
-
-        if (keys != null && !keys.isEmpty()) {
-            redisTemplate.delete(keys);
-        }
+        String versionKey = "user:cache_version:" + userId;
+        redisTemplate.opsForValue().increment(versionKey);
+        redisTemplate.expire(versionKey, Duration.ofDays(7));
     }
 
 }

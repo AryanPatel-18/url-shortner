@@ -6,12 +6,12 @@ import com.aryan.url_shortner.exceptions.ShortenedUrlNotFoundException;
 import com.aryan.url_shortner.model.ShortenedUrl;
 import com.aryan.url_shortner.repository.ShortenedUrlRepository;
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.NonNull;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
@@ -20,7 +20,8 @@ import java.util.concurrent.ThreadLocalRandom;
 @RequiredArgsConstructor
 public class ShortenedUrlService implements IShortenedUrlService{
 
-    private static final int SHORT_CODE_LENGTH = 6;
+    private static final int SHORT_CODE_LENGTH = 9;
+    private static final int MAX_COLLISION_RETRIES = 5;
     private final ShortenedUrlRepository shortenedUrlRepository;
     private final StringRedisTemplate redisTemplate;
     private static final String ACTIVE_KEY = "url:clicks:active";
@@ -28,36 +29,28 @@ public class ShortenedUrlService implements IShortenedUrlService{
     @Override
     public ShortenedUrl getOrCreateShortenedUrl(String originalUrl) {
         Optional<ShortenedUrl> existingUrl = shortenedUrlRepository.findByOriginalUrl(originalUrl);
-
-        if (existingUrl.isPresent()) {
-            return existingUrl.get();
-        }
-
-        ShortenedUrl shortenedUrl = shortenUrl(originalUrl);
-
-        return shortenedUrlRepository.save(shortenedUrl);
+        return existingUrl.orElseGet(() -> shortenUrl(originalUrl));
     }
 
     @Override
     public ShortenedUrl shortenUrl(String originalUrl) {
-        while (true) {
+        for (int attempt = 0; attempt < MAX_COLLISION_RETRIES; attempt++) {
             ShortenedUrl shortenedUrl = new ShortenedUrl();
-
             shortenedUrl.setOriginalUrl(originalUrl);
             shortenedUrl.setShortCode(generateShortCode());
 
             try {
-                return shortenedUrlRepository.saveAndFlush(shortenedUrl);
-
+                return shortenedUrlRepository.save(shortenedUrl);
             } catch (DataIntegrityViolationException e) {
-
-                if (isShortCodeCollision(e)) {
-                    continue;
+                if (!isShortCodeCollision(e)) {
+                    throw e;
                 }
-
-                throw e;
+                // Short code collision — retry with a new code
             }
         }
+        throw new IllegalStateException(
+                "Failed to generate a unique short code after " + MAX_COLLISION_RETRIES + " attempts"
+        );
     }
 
     @Override
@@ -123,7 +116,13 @@ public class ShortenedUrlService implements IShortenedUrlService{
         }
     }
 
-    private String generateShortCode() {
+    @Override
+    public void invalidateRedirectCache(String shortCode) {
+        String key = "redirect:" + shortCode;
+        redisTemplate.delete(key);
+    }
+
+    private @NonNull String generateShortCode() {
 
         String characters =
                 "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";

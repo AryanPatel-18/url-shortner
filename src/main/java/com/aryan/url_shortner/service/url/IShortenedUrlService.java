@@ -10,4 +10,5 @@ public interface IShortenedUrlService {
     ShortenedUrl shortenUrl(String originalUrl);
     RedirectCacheDTO getByShortCode(String shortCode);
     void incrementClickCount(UUID urlId);
+    void invalidateRedirectCache(String shortCode);
 }
