@@ -1,14 +1,19 @@
 package com.aryan.url_shortner.controller;
 import com.aryan.url_shortner.dto.*;
+import com.aryan.url_shortner.enums.RateLimitOperation;
 import com.aryan.url_shortner.model.ShortenedUrl;
 import com.aryan.url_shortner.model.User;
 import com.aryan.url_shortner.model.UserUrl;
 import com.aryan.url_shortner.model.CustomUserDetails;
 import com.aryan.url_shortner.service.userUrl.IUserUrlService;
+import com.aryan.url_shortner.annotation.RateLimit;
+
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+
 
 import java.util.UUID;
 
@@ -20,7 +25,8 @@ public class UrlController<IUrlService> {
     private final IUserUrlService userUrlService;
 
     @PostMapping
-    public ShortUrlResponse createShortUrl(
+    @RateLimit(operation = RateLimitOperation.CREATE)
+    public ResponseEntity<ShortUrlResponse> createShortUrl(
             @RequestBody CreateShortUrlRequest request,
             Authentication authentication
     ) {
@@ -34,14 +40,17 @@ public class UrlController<IUrlService> {
 
         ShortenedUrl url = userUrl.getShortenedUrl();
 
-        return new ShortUrlResponse(
-                userUrl.getId(),
-                url.getOriginalUrl(),
-                url.getShortCode()
+        return ResponseEntity.status(HttpStatus.CREATED).body(
+                new ShortUrlResponse(
+                        userUrl.getId(),
+                        url.getOriginalUrl(),
+                        url.getShortCode()
+                )
         );
     }
 
     @GetMapping
+    @RateLimit(operation = RateLimitOperation.LIST)
     public ResponseEntity<UserUrlsResponse> getUserUrls(
             Authentication authentication,
             @RequestParam(defaultValue = "0") int page,
@@ -59,7 +68,11 @@ public class UrlController<IUrlService> {
     }
 
     @DeleteMapping
-    public ResponseEntity<Void> removeUserUrl(@RequestBody DeleteUrlRequest request, Authentication authentication) {
+    @RateLimit(operation = RateLimitOperation.DELETE)
+    public ResponseEntity<Void> removeUserUrl(
+            @RequestBody DeleteUrlRequest request,
+            Authentication authentication
+    ) {
         User user = getAuthenticatedUser(authentication);
 
         userUrlService.removeUserUrl(
@@ -71,17 +84,24 @@ public class UrlController<IUrlService> {
     }
 
     @GetMapping("/{urlId}")
-    public UserUrlResponse getUserUrl(@PathVariable UUID urlId, Authentication authentication) {
+    @RateLimit(operation = RateLimitOperation.GET)
+    public ResponseEntity<UserUrlResponse> getUserUrl(
+            @PathVariable UUID urlId,
+            Authentication authentication
+    ) {
         User user = getAuthenticatedUser(authentication);
 
-        return userUrlService.getUserUrl(
-                user.getId(),
-                urlId
+        return ResponseEntity.ok(
+                userUrlService.getUserUrl(
+                        user.getId(),
+                        urlId
+                )
         );
     }
 
     @PatchMapping("/{urlId}")
-    public UserUrlResponse updateUrlStatus(
+    @RateLimit(operation = RateLimitOperation.UPDATE)
+    public ResponseEntity<UserUrlResponse> updateUrlStatus(
             @PathVariable UUID urlId,
             @RequestBody UpdateUrlStatusRequest request,
             Authentication authentication
@@ -96,14 +116,16 @@ public class UrlController<IUrlService> {
 
         ShortenedUrl url = userUrl.getShortenedUrl();
 
-        return new UserUrlResponse(
-                userUrl.getId(),
-                url.getOriginalUrl(),
-                url.getShortCode(),
-                url.getStatus(),
-                url.getClickCount(),
-                userUrl.getCreatedAt(),
-                userUrl.getUpdatedAt()
+        return ResponseEntity.ok(
+                new UserUrlResponse(
+                        userUrl.getId(),
+                        url.getOriginalUrl(),
+                        url.getShortCode(),
+                        url.getStatus(),
+                        url.getClickCount(),
+                        userUrl.getCreatedAt(),
+                        userUrl.getUpdatedAt()
+                )
         );
     }
 

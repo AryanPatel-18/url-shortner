@@ -9,6 +9,10 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @SpringBootApplication
 public class UrlShortnerApplication {
 
+	static {
+		java.util.TimeZone.setDefault(java.util.TimeZone.getTimeZone("Asia/Kolkata"));
+	}
+
 	public static void main(String[] args) {
 		SpringApplication.run(UrlShortnerApplication.class, args);
 	}

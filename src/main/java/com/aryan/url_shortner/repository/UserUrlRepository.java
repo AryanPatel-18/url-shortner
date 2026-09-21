@@ -17,7 +17,7 @@ public interface UserUrlRepository extends JpaRepository<UserUrl, Long> {
         SELECT uu
         FROM UserUrl uu
         JOIN FETCH uu.shortenedUrl
-        WHERE uu.user.id = :userId AND uu.id = :urlId
+        WHERE uu.user.id = :userId
         """)
     List<UserUrl> findByUserIdWithShortenedUrl(@Param("userId") UUID userId, Pageable pageable);
 

@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS shortened_urls CASCADE;
+
 CREATE TABLE shortened_urls (
     id UUID PRIMARY KEY,
     original_url TEXT NOT NULL UNIQUE,

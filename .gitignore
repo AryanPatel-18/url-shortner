@@ -45,4 +45,5 @@ Thumbs.db
 
 results
 load-tests
-explanation.md
+explanation.mdrun-all-tests.ps1
+run-all-tests.bat

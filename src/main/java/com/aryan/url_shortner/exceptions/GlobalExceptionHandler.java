@@ -61,6 +61,14 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(RateLimitExceededException.class)
+    public ResponseEntity<Void> handleRateLimitExceeded(RateLimitExceededException ex) {
+        return ResponseEntity
+                .status(HttpStatus.TOO_MANY_REQUESTS)
+                .header(org.springframework.http.HttpHeaders.RETRY_AFTER, String.valueOf(ex.getRetryAfterSeconds()))
+                .build();
+    }
+
     private ResponseEntity<ApiErrorResponse> buildResponse(
             HttpStatus status,
             String message) {
