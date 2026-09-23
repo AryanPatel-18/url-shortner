@@ -33,6 +33,8 @@ public class DotenvEnvironmentPostProcessor implements EnvironmentPostProcessor 
 
         properties.put("REDIS_HOST", dotenv.get("REDIS_HOST"));
         properties.put("REDIS_PORT", dotenv.get("REDIS_PORT"));
+        properties.put("REDIS_PASSWORD", dotenv.get("REDIS_PASSWORD"));
+        properties.put("REDIS_URL", dotenv.get("REDIS_URL"));
 
         environment.getPropertySources().addLast(
                 new MapPropertySource("dotenv", properties)
