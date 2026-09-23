@@ -3,6 +3,7 @@ package com.aryan.url_shortner.service.user;
 import com.aryan.url_shortner.dto.LoginRequest;
 import com.aryan.url_shortner.dto.LoginResponse;
 import com.aryan.url_shortner.dto.RegisterUserRequest;
+import com.aryan.url_shortner.exceptions.InvalidCredentialsException;
 import com.aryan.url_shortner.exceptions.UserAlreadyExistsException;
 import com.aryan.url_shortner.exceptions.UserNotFoundException;
 import com.aryan.url_shortner.model.User;
@@ -15,6 +16,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.security.core.AuthenticationException;
 
 import java.util.UUID;
 
@@ -59,13 +61,17 @@ public class UserService implements IUserService{
 
     @Override
     public LoginResponse loginUser(LoginRequest request) {
-
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.email(),
-                        request.password()
-                )
-        );
+        Authentication authentication;
+        try {
+            authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            request.email(),
+                            request.password()
+                    )
+            );
+        } catch (AuthenticationException e) {
+            throw new InvalidCredentialsException("Invalid email or password");
+        }
 
         CustomUserDetails userDetails =
                 (CustomUserDetails) authentication.getPrincipal();

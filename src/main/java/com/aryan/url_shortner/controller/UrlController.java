@@ -1,4 +1,5 @@
 package com.aryan.url_shortner.controller;
+
 import com.aryan.url_shortner.dto.*;
 import com.aryan.url_shortner.enums.RateLimitOperation;
 import com.aryan.url_shortner.model.ShortenedUrl;
@@ -8,18 +9,22 @@ import com.aryan.url_shortner.model.CustomUserDetails;
 import com.aryan.url_shortner.service.userUrl.IUserUrlService;
 import com.aryan.url_shortner.annotation.RateLimit;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-
 
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/${api.version}/urls")
 @RequiredArgsConstructor
+@Validated
 public class UrlController<IUrlService> {
 
     private final IUserUrlService userUrlService;
@@ -27,7 +32,7 @@ public class UrlController<IUrlService> {
     @PostMapping
     @RateLimit(operation = RateLimitOperation.CREATE)
     public ResponseEntity<ShortUrlResponse> createShortUrl(
-            @RequestBody CreateShortUrlRequest request,
+            @Valid @RequestBody CreateShortUrlRequest request,
             Authentication authentication
     ) {
         User user = getAuthenticatedUser(authentication);
@@ -53,13 +58,9 @@ public class UrlController<IUrlService> {
     @RateLimit(operation = RateLimitOperation.LIST)
     public ResponseEntity<UserUrlsResponse> getUserUrls(
             Authentication authentication,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size
+            @RequestParam(defaultValue = "0") @Min(value = 0, message = "Page must be >= 0") int page,
+            @RequestParam(defaultValue = "20") @Min(value = 1, message = "Size must be >= 1") @Max(value = 20, message = "Size must be <= 20") int size
     ) {
-        if (page < 0 || size < 1 || size > 20) {
-            return ResponseEntity.badRequest().build();
-        }
-
         User user = getAuthenticatedUser(authentication);
 
         return ResponseEntity.ok(
@@ -70,7 +71,7 @@ public class UrlController<IUrlService> {
     @DeleteMapping
     @RateLimit(operation = RateLimitOperation.DELETE)
     public ResponseEntity<Void> removeUserUrl(
-            @RequestBody DeleteUrlRequest request,
+            @Valid @RequestBody DeleteUrlRequest request,
             Authentication authentication
     ) {
         User user = getAuthenticatedUser(authentication);
@@ -103,7 +104,7 @@ public class UrlController<IUrlService> {
     @RateLimit(operation = RateLimitOperation.UPDATE)
     public ResponseEntity<UserUrlResponse> updateUrlStatus(
             @PathVariable UUID urlId,
-            @RequestBody UpdateUrlStatusRequest request,
+            @Valid @RequestBody UpdateUrlStatusRequest request,
             Authentication authentication
     ) {
         User user = getAuthenticatedUser(authentication);
