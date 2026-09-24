@@ -31,9 +31,17 @@ public class RateLimiterService implements IRateLimiter{
 
     @Override
     public RateLimitResult check(UUID userId, RateLimitPolicy policy) {
+        String key = "rate_limit:user:" + userId + ":" + policy.operation().name().toLowerCase();
+        return executeCheck(key, policy);
+    }
 
-        String key = buildKey(userId, policy);
+    @Override
+    public RateLimitResult check(String keyIdentifier, RateLimitPolicy policy) {
+        String key = "rate_limit:custom:" + keyIdentifier + ":" + policy.operation().name().toLowerCase();
+        return executeCheck(key, policy);
+    }
 
+    private RateLimitResult executeCheck(String key, RateLimitPolicy policy) {
         long now = System.currentTimeMillis();
         long refillInterval = policy.refillInterval().toMillis();
         long ttl = calculateTtl(policy).toSeconds();
@@ -50,7 +58,6 @@ public class RateLimiterService implements IRateLimiter{
             );
 
             if (result.size() < 3) {
-                // Unexpected result format, fail-open to avoid blocking requests
                 return new RateLimitResult(true, -1, 0);
             }
 
@@ -58,21 +65,11 @@ public class RateLimiterService implements IRateLimiter{
             long remainingTokens = result.get(1);
             long retryAfterSeconds = result.get(2);
 
-            return new RateLimitResult(
-                    allowed,
-                    remainingTokens,
-                    retryAfterSeconds
-            );
+            return new RateLimitResult(allowed, remainingTokens, retryAfterSeconds);
         } catch (Exception e) {
-            // Log the error in a real production system
             System.err.println("Rate limiter failed, failing open: " + e.getMessage());
-            // Fail-open: allow the request if Redis is down or the script fails
             return new RateLimitResult(true, -1, 0);
         }
-    }
-
-    private String buildKey(UUID userId, RateLimitPolicy policy) {
-        return "rate_limit:user:" + userId + ":" + policy.operation().name().toLowerCase();
     }
 
     private Duration calculateTtl(RateLimitPolicy policy) {

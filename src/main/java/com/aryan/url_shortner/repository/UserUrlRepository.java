@@ -11,6 +11,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface UserUrlRepository extends JpaRepository<UserUrl, Long> {
+    void deleteByUserId(UUID userId);
     Optional<UserUrl> findByUserIdAndShortenedUrlId(UUID userId, UUID urlId);
 
     @Query("""

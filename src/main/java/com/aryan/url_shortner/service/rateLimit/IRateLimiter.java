@@ -7,4 +7,5 @@ import java.util.UUID;
 
 public interface IRateLimiter {
     RateLimitResult check(UUID userId, RateLimitPolicy policy);
+    RateLimitResult check(String keyIdentifier, RateLimitPolicy policy);
 }

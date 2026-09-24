@@ -51,6 +51,9 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/" + apiVersion + "/users/register",
                                 "/api/" + apiVersion + "/users/login",
+                                "/api/" + apiVersion + "/users/verify-email",
+                                "/api/" + apiVersion + "/users/resend-verification",
+                                "/api/" + apiVersion + "/users/check-verification",
                                 "/{shortCode}"
                         ).permitAll()
                         .anyRequest().authenticated()

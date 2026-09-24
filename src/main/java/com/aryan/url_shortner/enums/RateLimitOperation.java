@@ -5,5 +5,6 @@ public enum RateLimitOperation {
     UPDATE,
     DELETE,
     LIST,
-    GET
+    GET,
+    RESEND_VERIFICATION
 }

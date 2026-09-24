@@ -28,6 +28,8 @@ public class UserService implements IUserService{
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final IJwtService jwtService;
+    private final IEmailVerificationService emailVerificationService;
+    private final com.aryan.url_shortner.repository.UserUrlRepository userUrlRepository;
 
     @Override
     public User getUser(UUID id) {
@@ -46,6 +48,23 @@ public class UserService implements IUserService{
     }
 
     @Override
+    public boolean isEmailVerified(String email) {
+        return userRepository.findByEmail(email)
+                .map(User::isEmailVerified)
+                .orElse(false);
+    }
+
+    @Override
+    @jakarta.transaction.Transactional
+    public void deleteUser(UUID id) {
+        if (!userRepository.existsById(id)) {
+            throw new UserNotFoundException("The user does not exist");
+        }
+        userUrlRepository.deleteByUserId(id);
+        userRepository.deleteById(id);
+    }
+
+    @Override
     public User registerUser(RegisterUserRequest request) {
         if (userRepository.existsByEmail(request.email())) {
             throw new UserAlreadyExistsException("Email already registered");
@@ -54,9 +73,12 @@ public class UserService implements IUserService{
         User user = new User();
         user.setEmail(request.email());
         user.setPasswordHash(passwordEncoder.encode(request.password()));
+        user.setEmailVerified(false);
 
-        return userRepository.save(user);
-
+        User savedUser = userRepository.save(user);
+        emailVerificationService.sendVerificationEmail(savedUser);
+        
+        return savedUser;
     }
 
     @Override
@@ -69,23 +91,16 @@ public class UserService implements IUserService{
                             request.password()
                     )
             );
+        } catch (org.springframework.security.authentication.DisabledException e) {
+            throw new com.aryan.url_shortner.exceptions.EmailNotVerifiedException("Please verify your email address to log in.");
         } catch (AuthenticationException e) {
             throw new InvalidCredentialsException("Invalid email or password");
         }
-
-        CustomUserDetails userDetails =
-                (CustomUserDetails) authentication.getPrincipal();
-
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
         assert userDetails != null;
         User user = userDetails.getUser();
-
         String token = jwtService.generateToken(userDetails);
-
-        return new LoginResponse(
-                user.getId(),
-                user.getEmail(),
-                token
-        );
+        return new LoginResponse(user.getId(), user.getEmail(), token);
     }
 
 

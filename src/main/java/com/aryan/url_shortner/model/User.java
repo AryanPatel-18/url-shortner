@@ -34,6 +34,9 @@ public class User {
     @Column(nullable = false)
     private Integer totalUrlsCreated = 0;
 
+    @Column(nullable = false)
+    private boolean emailVerified = true;
+
     @PrePersist
     protected void onCreate() {
         Instant now = Instant.now();

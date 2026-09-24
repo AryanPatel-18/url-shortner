@@ -11,6 +11,8 @@ public interface IUserService {
     public User getUser(UUID id);
     public User getUserByEmail(String email);
     public boolean emailExists(String email);
+    public boolean isEmailVerified(String email);
+    public void deleteUser(UUID id);
     public User registerUser(RegisterUserRequest request);
     public LoginResponse loginUser(LoginRequest request);
 }

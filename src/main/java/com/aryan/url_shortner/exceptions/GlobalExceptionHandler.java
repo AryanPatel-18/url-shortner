@@ -153,6 +153,27 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.BAD_REQUEST, message);
     }
 
+    @ExceptionHandler(InvalidVerificationTokenException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidToken(InvalidVerificationTokenException ex) {
+        return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
+    @ExceptionHandler(EmailAlreadyVerifiedException.class)
+    public ResponseEntity<ApiErrorResponse> handleAlreadyVerified(EmailAlreadyVerifiedException ex) {
+        return buildResponse(HttpStatus.CONFLICT, ex.getMessage());
+    }
+
+    // ⬇️ Updated this block to use the generic EmailDeliveryException ⬇️
+    @ExceptionHandler(EmailDeliveryException.class)
+    public ResponseEntity<ApiErrorResponse> handleEmailDeliveryError(EmailDeliveryException ex) {
+        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
+    }
+
+    @ExceptionHandler(EmailNotVerifiedException.class)
+    public ResponseEntity<ApiErrorResponse> handleEmailNotVerified(EmailNotVerifiedException ex) {
+        return buildResponse(HttpStatus.FORBIDDEN, ex.getMessage());
+    }
+
     private ResponseEntity<ApiErrorResponse> buildResponse(
             HttpStatus status,
             String message) {
