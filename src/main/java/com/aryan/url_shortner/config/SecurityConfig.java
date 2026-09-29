@@ -54,6 +54,7 @@ public class SecurityConfig {
                                 "/api/" + apiVersion + "/users/verify-email",
                                 "/api/" + apiVersion + "/users/resend-verification",
                                 "/api/" + apiVersion + "/users/check-verification",
+                                "/api/" + apiVersion + "/redirect/{shortCode}",
                                 "/{shortCode}"
                         ).permitAll()
                         .anyRequest().authenticated()

@@ -39,4 +39,22 @@ public class RedirectController {
                 .location(URI.create(url.originalUrl()))
                 .build();
     }
+
+    @GetMapping("/api/${api.version}/redirect/{shortCode}")
+    public ResponseEntity<com.aryan.url_shortner.dto.RedirectResponse> resolveShortCode(
+            @PathVariable String shortCode) {
+
+        RedirectCacheDTO url =
+                urlsService.getByShortCode(shortCode);
+
+        if (url.status() != UrlStatus.ACTIVE) {
+            return ResponseEntity
+                    .status(HttpStatus.GONE)
+                    .build();
+        }
+
+        urlsService.incrementClickCount(url.id());
+
+        return ResponseEntity.ok(new com.aryan.url_shortner.dto.RedirectResponse(url.originalUrl()));
+    }
 }
