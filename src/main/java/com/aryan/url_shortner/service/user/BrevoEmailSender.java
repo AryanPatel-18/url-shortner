@@ -1,6 +1,7 @@
 package com.aryan.url_shortner.service.user;
 
 import com.aryan.url_shortner.exceptions.EmailDeliveryException;
+import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
@@ -48,5 +49,39 @@ public class BrevoEmailSender implements IEmailSender {
         } catch (org.springframework.web.client.RestClientException e) {
             throw new EmailDeliveryException("Failed to send verification email. Please try again later.");
         }
+    }
+
+    @Override
+    public void sendPasswordResetEmail(String toEmail, String resetLink) {
+        Map<String, Object> payload = getPayload(toEmail, resetLink);
+
+        try {
+            restClient.post()
+                    .uri("https://api.brevo.com/v3/smtp/email")
+                    .header("api-key", apiKey)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(payload)
+                    .retrieve()
+                    .toBodilessEntity();
+        } catch (org.springframework.web.client.RestClientException e) {
+            throw new EmailDeliveryException("Failed to send reset email. Please try again later.");
+        }
+    }
+
+    private @NonNull Map<String, Object> getPayload(String toEmail, String resetLink) {
+        String subject = "Reset your password";
+        String htmlContent = String.format(
+                "<html><body><h2>Password Reset</h2>" +
+                        "<p>Click the link below to reset your password. This link will expire in 15 minutes.</p>" +
+                        "<a href=\"%s\">Reset Password</a></body></html>",
+                resetLink
+        );
+
+        return Map.of(
+                "sender", Map.of("name", senderName, "email", senderEmail),
+                "to", List.of(Map.of("email", toEmail)),
+                "subject", subject,
+                "htmlContent", htmlContent
+        );
     }
 }

@@ -51,11 +51,14 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/" + apiVersion + "/users/register",
                                 "/api/" + apiVersion + "/users/login",
+                                "/api/" + apiVersion + "/users/google",
                                 "/api/" + apiVersion + "/users/verify-email",
                                 "/api/" + apiVersion + "/users/resend-verification",
                                 "/api/" + apiVersion + "/users/check-verification",
                                 "/api/" + apiVersion + "/redirect/{shortCode}",
-                                "/{shortCode}"
+                                "/{shortCode}",
+                                "/api/" + apiVersion + "/users/forgot-password",
+                                "/api/" + apiVersion + "/users/reset-password"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

@@ -1,5 +1,6 @@
 package com.aryan.url_shortner.model;
 
+import com.aryan.url_shortner.enums.AuthProvider;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -22,8 +23,12 @@ public class User {
     @Column(nullable = false, unique = true)
     private String email;
 
-    @Column(nullable = false)
+    @Column(nullable = true)
     private String passwordHash;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private AuthProvider authProvider = AuthProvider.LOCAL;
 
     @Column(nullable = false, updatable = false)
     private Instant createdAt;

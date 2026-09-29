@@ -2,6 +2,7 @@ package com.aryan.url_shortner.service.security;
 
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.util.Date;
 import java.util.UUID;
 
 public interface IJwtService {
@@ -9,4 +10,5 @@ public interface IJwtService {
     String extractUsername(String token);
     UUID extractUserId(String token);
     boolean isTokenValid(String token);
+    Date extractIssuedAt(String token);
 }

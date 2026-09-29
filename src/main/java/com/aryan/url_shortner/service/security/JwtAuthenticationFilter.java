@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -22,7 +23,7 @@ import java.util.UUID;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final IJwtService jwtService;
-    private final ICustomUserDetailsService userDetailsService;
+    private final StringRedisTemplate redisTemplate;
 
     @Override
     protected void doFilterInternal(
@@ -38,8 +39,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String token = authHeader.substring(7);
         try {
             if (jwtService.isTokenValid(token)) {
-                String email = jwtService.extractUsername(token);
+
                 UUID userId = jwtService.extractUserId(token);
+                java.util.Date iat = jwtService.extractIssuedAt(token);
+
+                String revokedTimestampStr = redisTemplate.opsForValue().get("user:jwt_revoked_before:" + userId);
+                if (revokedTimestampStr != null) {
+                    long revokedSeconds = Long.parseLong(revokedTimestampStr);
+                    if (iat.getTime() / 1000 < revokedSeconds) {
+                        throw new JwtException("Token was revoked due to a password change");
+                    }
+                }
+
+                String email = jwtService.extractUsername(token);
                 UsernamePasswordAuthenticationToken authentication = getAuthentication(userId, email);
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             } else {

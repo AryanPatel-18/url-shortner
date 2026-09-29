@@ -28,6 +28,7 @@ import java.util.UUID;
 public class UrlController<IUrlService> {
 
     private final IUserUrlService userUrlService;
+    private final com.aryan.url_shortner.service.user.IUserService userService;
 
     @PostMapping
     @RateLimit(operation = RateLimitOperation.CREATE)
@@ -36,6 +37,10 @@ public class UrlController<IUrlService> {
             Authentication authentication
     ) {
         User user = getAuthenticatedUser(authentication);
+
+        if (!userService.isEmailVerified(user.getEmail())) {
+            throw new com.aryan.url_shortner.exceptions.EmailNotVerifiedException("Please verify your email address to create URLs.");
+        }
 
         UserUrl userUrl =
                 userUrlService.createUserUrl(

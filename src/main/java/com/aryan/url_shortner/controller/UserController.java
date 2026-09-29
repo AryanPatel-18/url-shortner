@@ -4,14 +4,14 @@ import com.aryan.url_shortner.annotation.RateLimit;
 import com.aryan.url_shortner.dto.*;
 import com.aryan.url_shortner.enums.RateLimitOperation;
 import com.aryan.url_shortner.model.User;
-import com.aryan.url_shortner.service.user.EmailVerificationService;
-import com.aryan.url_shortner.service.user.IEmailVerificationService;
-import com.aryan.url_shortner.service.user.IUserService;
+import com.aryan.url_shortner.service.security.IJwtService;
+import com.aryan.url_shortner.service.user.*;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.util.Map;
 
@@ -22,14 +22,22 @@ public class UserController {
 
     private final IUserService userService;
     private final IEmailVerificationService emailVerificationService;
+    private final IPasswordResetService passwordResetService;
+    private final IJwtService jwtService;
+    private final IAuthService googleAuthService;
+
+    @Value("${frontend.url:http://localhost:5173}")
+    private String frontendUrl;
 
     @PostMapping("/register")
-    public ResponseEntity<UserResponse> registerUser(@Valid @RequestBody RegisterUserRequest request) {
+    public ResponseEntity<LoginResponse> registerUser(@Valid @RequestBody RegisterUserRequest request) {
         User user = userService.registerUser(request);
+        String jwt = jwtService.generateToken(new com.aryan.url_shortner.model.CustomUserDetails(user));
         return ResponseEntity.status(HttpStatus.CREATED).body(
-                new UserResponse(
+                new LoginResponse(
                         user.getId(),
-                        user.getEmail()
+                        user.getEmail(),
+                        jwt
                 )
         );
     }
@@ -38,9 +46,6 @@ public class UserController {
     public ResponseEntity<LoginResponse> loginUser(@Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(userService.loginUser(request));
     }
-
-    @org.springframework.beans.factory.annotation.Value("${frontend.url:http://localhost:5173}")
-    private String frontendUrl;
 
     @GetMapping("/verify-email")
     public ResponseEntity<Void> verifyEmail(@RequestParam String token) {
@@ -76,7 +81,29 @@ public class UserController {
     public ResponseEntity<Void> deleteUser(org.springframework.security.core.Authentication authentication) {
         com.aryan.url_shortner.model.CustomUserDetails userDetails = 
                 (com.aryan.url_shortner.model.CustomUserDetails) authentication.getPrincipal();
+
+        assert userDetails != null;
         userService.deleteUser(userDetails.getUser().getId());
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/forgot-password")
+    @RateLimit(operation = RateLimitOperation.FORGOT_PASSWORD)
+    public ResponseEntity<Map<String, String>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        passwordResetService.requestPasswordReset(request.email());
+        return ResponseEntity.ok(Map.of("message", "If the email is registered, a password reset link has been sent."));
+    }
+
+    @PostMapping("/reset-password")
+    @RateLimit(operation = RateLimitOperation.RESET_PASSWORD)
+    public ResponseEntity<LoginResponse> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        LoginResponse response = passwordResetService.resetPassword(request.token(), request.newPassword());
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/google")
+    @RateLimit(operation = RateLimitOperation.GOOGLE_LOGIN)
+    public ResponseEntity<LoginResponse> googleLogin(@Valid @RequestBody GoogleLoginRequest request) {
+        return ResponseEntity.ok(googleAuthService.authenticateGoogleUser(request.idToken()));
     }
 }

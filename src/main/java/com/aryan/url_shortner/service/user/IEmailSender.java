@@ -9,4 +9,5 @@ public interface IEmailSender {
      * @throws com.aryan.url_shortner.exceptions.EmailDeliveryException if delivery fails
      */
     void sendVerificationEmail(String toEmail, String verificationUrl);
+    void sendPasswordResetEmail(String toEmail, String resetLink);
 }

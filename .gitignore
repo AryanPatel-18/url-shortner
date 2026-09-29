@@ -47,4 +47,3 @@ results
 load-tests
 explanation.mdrun-all-tests.ps1
 run-all-tests.bat
-parse-results.js

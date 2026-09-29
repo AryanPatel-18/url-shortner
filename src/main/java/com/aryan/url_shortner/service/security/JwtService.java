@@ -64,6 +64,11 @@ public class JwtService implements IJwtService{
         }
     }
 
+    @Override
+    public Date extractIssuedAt(String token) {
+        return extractAllClaims(token).getIssuedAt();
+    }
+
     private boolean isTokenExpired(String token) {
         return extractAllClaims(token)
                 .getExpiration()
