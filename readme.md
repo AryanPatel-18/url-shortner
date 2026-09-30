@@ -1,287 +1,359 @@
-# URL Shortener
+# URLZS
 
-A production-ready URL shortening REST API built with Spring Boot, PostgreSQL, Redis, and Spring Security. The application converts long URLs into compact, shareable short links, tracks click analytics, and protects all endpoints with JWT authentication and per-user rate limiting.
+<p align="center">
+  <strong>A focused URL shortener with a polished React workspace and a production-minded Spring Boot API.</strong>
+</p>
 
-## Features
+<p align="center">
+  <a href="https://urlzs.xyz">Live app</a> ·
+  <a href="https://api.urlzs.xyz/actuator/health">API health</a> ·
+  <a href="#getting-started">Run locally</a>
+</p>
 
-- **URL Shortening** — Convert any long URL into a unique 9-character short code. If the same URL is submitted again, the existing short code is reused.
-- **Short Code Collision Handling** — Automatic retry logic (up to 5 attempts) handles the rare case of a generated code conflicting with an existing one at the database constraint level.
-- **JWT Authentication** — Stateless authentication using signed JSON Web Tokens. Registration and login endpoints are public; all URL management endpoints require a valid `Bearer` token.
-- **Many-to-Many URL Ownership** — A `user_urls` join table allows multiple users to independently own and manage the same shortened URL. Each user sees their own library without affecting others.
-- **URL Lifecycle Management** — Users can create, list (with pagination), view, update status (`ACTIVE`/`DISABLED`), and delete URLs from their personal library.
-- **Click Tracking with Redis Write-Behind** — Click counts are buffered in a Redis hash and flushed to PostgreSQL in batches every 5 seconds by a scheduled background worker, eliminating per-request `UPDATE` queries on the hot redirect path.
-- **Redis Redirect Caching** — Short-code-to-URL lookups are cached in Redis with a 1-hour TTL, drastically reducing database reads for popular links. Cache is automatically invalidated when a URL's status is updated.
-- **AOP-Based Rate Limiting** — A Token Bucket algorithm implemented as an atomic Redis Lua script, wired via Spring AOP and a custom `@RateLimit` annotation. Rate limits are enforced per-user, per-operation, and are fully configurable through `application.properties`.
-- **Fail-Open Circuit Breaking** — If Redis becomes unavailable, the rate limiter gracefully allows all traffic through rather than blocking legitimate users.
-- **Centralized Error Handling** — A `@RestControllerAdvice` maps all domain exceptions to clean JSON error responses with appropriate HTTP status codes, including `429 Too Many Requests` with a calculated `Retry-After` header.
-- **Flyway Database Migrations** — Schema changes are versioned and applied automatically on startup.
-- **Spring Boot Actuator** — Health and metrics endpoints are exposed at `/actuator/health` and `/actuator/metrics`.
+<p align="center">
+  <img src="https://img.shields.io/badge/Java-25-ED8B00?logo=openjdk&logoColor=white" alt="Java 25" />
+  <img src="https://img.shields.io/badge/Spring%20Boot-4.1.1-6DB33F?logo=springboot&logoColor=white" alt="Spring Boot 4.1.1" />
+  <img src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=111827" alt="React 19" />
+  <img src="https://img.shields.io/badge/PostgreSQL-18-4169E1?logo=postgresql&logoColor=white" alt="PostgreSQL 18" />
+  <img src="https://img.shields.io/badge/Redis-powered-DC382D?logo=redis&logoColor=white" alt="Redis powered" />
+</p>
 
-## Technology Stack
+URLZS turns long links into compact, shareable URLs and gives each account a simple place to create, organize, monitor, and disable them. The backend is built to keep the redirect path fast while the frontend keeps the everyday workflow clear and approachable.
 
-| Layer | Technology |
-| :--- | :--- |
-| Language | Java 25 |
-| Framework | Spring Boot 4.1.1 |
-| Web | Spring Web MVC |
-| Persistence | Spring Data JPA / Hibernate 7 |
-| Database | PostgreSQL 18 |
-| Migrations | Flyway 12 |
-| Caching & Rate Limiting | Redis (via Spring Data Redis) |
-| Authentication | Spring Security + JJWT 0.13 |
-| Build | Maven Wrapper |
-| Infrastructure | Docker Compose |
-| Code Generation | Lombok |
-| Monitoring | Spring Boot Actuator |
+## What makes it useful
 
-## API Endpoints
+### For people using the app
 
-The API version prefix is configurable via `api.version` in `application.properties` (default: `v1`).
+- Create a personal library of short links from a responsive dashboard.
+- Copy or open a short URL, refresh its click count, and view its current status.
+- Enable and disable links with confirmation before a public redirect is stopped.
+- Browse links in a paginated table on desktop and touch-friendly cards on smaller screens.
+- Sign up with email/password or Google, with email verification for local accounts.
+- Recover an account with a one-time password-reset link.
+- Keep the interface comfortable with a light/dark theme toggle and accessible feedback states.
+- Visit a short link directly; the frontend resolves it through the API and shows a friendly unavailable state for missing or disabled links.
 
-### Public Endpoints (No Authentication Required)
+### Under the hood
 
-| Method | Endpoint | Description | Response |
-| :--- | :--- | :--- | :--- |
-| `POST` | `/api/v1/users/register` | Register a new user | `200` with user ID and email |
-| `POST` | `/api/v1/users/login` | Authenticate and receive a JWT | `200` with JWT token |
-| `GET` | `/{shortCode}` | Redirect to the original URL | `302` redirect / `410` if disabled |
-
-### Protected Endpoints (JWT Required)
-
-All protected endpoints require the `Authorization: Bearer <token>` header and are individually rate-limited.
-
-| Method | Endpoint | Description | Rate Limit | Response |
-| :--- | :--- | :--- | :--- | :--- |
-| `POST` | `/api/v1/urls` | Create a shortened URL | 10 req / 60s | `201` with short code |
-| `GET` | `/api/v1/urls` | List user's URLs (paginated) | 60 req / 60s | `200` with URL list |
-| `GET` | `/api/v1/urls/{urlId}` | Get a single URL's details | 60 req / 60s | `200` with URL details |
-| `PATCH` | `/api/v1/urls/{urlId}` | Update URL status (ACTIVE/DISABLED) | 30 req / 60s | `200` with updated URL |
-| `DELETE` | `/api/v1/urls` | Remove a URL from user's library | 30 req / 60s | `204` no content |
-
-### Error Responses
-
-All errors return a consistent JSON structure:
-
-```json
-{
-  "status": 409,
-  "message": "User already exists with email: user@example.com",
-  "timestamp": "2026-09-21T19:00:00"
-}
-```
-
-| Status | Condition |
-| :--- | :--- |
-| `400` | Invalid pagination parameters |
-| `401` | Invalid credentials or missing/expired JWT |
-| `404` | User, URL, or user-URL association not found |
-| `409` | Email already registered |
-| `410` | Short code exists but URL is disabled |
-| `429` | Rate limit exceeded (includes `Retry-After` header) |
+- Nine-character, URL-safe short codes with reuse for duplicate original URLs.
+- Many-to-many ownership through `user_urls`: multiple users can save the same shortened URL independently.
+- Stateless JWT authentication with password-change revocation support.
+- Redis redirect caching, two-minute user-list caching, and a Redis write-behind click counter.
+- Token-bucket rate limiting through Spring AOP and an atomic Redis Lua script.
+- Validation for email, password, URL format/length, UUIDs, enum values, and pagination.
+- Flyway migrations, centralized JSON errors, explicit CORS origins, and Actuator health/metrics endpoints.
 
 ## Architecture
 
-### Project Structure
+```mermaid
+flowchart LR
+    Browser[React + Vite frontend] -->|JSON + Bearer JWT| API[Spring Boot API]
+    Browser -->|short-code resolution| API
+    API --> Security[Spring Security + JWT]
+    API --> Services[URL and account services]
+    Services --> DB[(PostgreSQL)]
+    Services --> Redis[(Redis)]
+    Redis --> Cache[Redirect + user-list cache]
+    Redis --> Limits[Lua token buckets]
+    Redis --> Clicks[Buffered click counts]
+    Clicks -->|batch flush every 5s| DB
+    Services --> Mail[Brevo email API]
+    Browser --> Google[Google Identity Services]
+```
+
+The redirect path is deliberately split into two API shapes:
+
+- `GET /{shortCode}` returns an HTTP `302` redirect for normal link visits.
+- `GET /api/v1/redirect/{shortCode}` returns `{ "originalUrl": "..." }` for the React client, which validates the URL before navigating.
+
+## Technology
+
+| Area | Choice |
+| --- | --- |
+| Backend language | Java 25 |
+| Backend framework | Spring Boot 4.1.1, Spring MVC, Spring Security |
+| Persistence | Spring Data JPA / Hibernate, PostgreSQL 18 |
+| Migrations | Flyway |
+| Caching and rate limiting | Redis, Spring Data Redis, Redis Lua |
+| Authentication | JWT via JJWT, BCrypt, Google ID token verification |
+| Email | Brevo SMTP API |
+| Frontend | React 19, Vite 8, browser Fetch API |
+| Frontend styling | Tailwind CSS browser CDN with a small custom CSS layer |
+| Build and operations | Maven Wrapper, Docker Compose, Spring Boot Actuator |
+
+## Repository layout
+
+The backend is the Git repository containing this README. The React client currently lives in the sibling workspace directory shown below.
 
 ```text
-src/main/java/com/aryan/url_shortner/
-├── annotation/          Custom annotations (@RateLimit)
-├── aspect/              AOP aspects (RateLimitAspect)
-├── config/              Security config, rate limit properties, .env loader
-├── controller/          REST controllers (User, Url, Redirect)
-├── dto/                 Request/response records
-├── enums/               UrlStatus, RateLimitOperation
-├── exceptions/          Domain exceptions + GlobalExceptionHandler
-├── model/               JPA entities (User, ShortenedUrl, UserUrl)
-├── repository/          Spring Data JPA repositories
-└── service/
-    ├── rateLimit/        Token bucket rate limiter (Redis Lua)
-    ├── security/         JWT filter, JWT service, UserDetailsService
-    ├── url/              URL shortening, redirect caching, click flush worker
-    ├── user/             User registration and login
-    └── userUrl/          User-URL association management
-
-src/main/resources/
-├── db/migration/        Flyway SQL migrations (V1–V3)
-├── scripts/             Redis Lua scripts (rate_limiter.lua)
-└── application.properties
+URL-Shortner/
+├── url-shortner/                 # Spring Boot API and infrastructure
+│   ├── src/main/java/            # controllers, services, security, persistence
+│   ├── src/main/resources/
+│   │   ├── db/migration/         # Flyway V1–V5 migrations
+│   │   ├── scripts/              # Redis Lua scripts
+│   │   └── application.properties
+│   ├── docker-compose.yml        # PostgreSQL + Redis
+│   ├── Dockerfile
+│   ├── Makefile
+│   └── readme.md
+└── Frontend/frontend/            # React + Vite client
+    ├── src/pages/                # landing, auth, dashboard, redirect views
+    ├── src/components/           # reusable UI and feedback components
+    └── src/services/api.js       # Fetch wrapper and API contract
 ```
 
-### Database Schema
+## API reference
 
-```text
-┌──────────────┐       ┌──────────────┐       ┌──────────────────┐
-│    users     │       │  user_urls   │       │ shortened_urls   │
-├──────────────┤       ├──────────────┤       ├──────────────────┤
-│ id (PK)      │──────<│ user_id (FK) │       │ id (PK)          │
-│ email        │       │ url_id (FK)  │>──────│ original_url     │
-│ password_hash│       │ created_at   │       │ short_code       │
-│ created_at   │       │ updated_at   │       │ click_count      │
-│ updated_at   │       └──────────────┘       │ status           │
-│ total_urls   │                              │ created_at       │
-└──────────────┘                              │ updated_at       │
-                                              └──────────────────┘
+The current API prefix is `/api/v1` (`api.version` in `application.properties`). Protected requests use:
+
+```http
+Authorization: Bearer <jwt-token>
 ```
 
-### Rate Limiting Architecture
+### Public endpoints
 
-Rate limiting is decoupled from business logic using Spring AOP:
+| Method | Endpoint | Purpose | Success |
+| --- | --- | --- | --- |
+| `POST` | `/api/v1/users/register` | Create a local account and send a verification email | `201` + `userId`, `email`, `token` |
+| `POST` | `/api/v1/users/login` | Sign in with email/password | `200` + JWT session |
+| `POST` | `/api/v1/users/google` | Verify a Google ID token and sign in/create the account | `200` + JWT session |
+| `GET` | `/api/v1/users/verify-email?token=...` | Verify a local account; redirects to the frontend login page | `302` |
+| `POST` | `/api/v1/users/resend-verification` | Send another verification link when appropriate | `200` |
+| `GET` | `/api/v1/users/check-verification?email=...` | Check verification state | `200` + `{ "verified": true/false }` |
+| `POST` | `/api/v1/users/forgot-password` | Email a password-reset link | `200` |
+| `POST` | `/api/v1/users/reset-password` | Consume a reset token and return a fresh JWT session | `200` |
+| `GET` | `/{shortCode}` | Redirect an active short URL | `302` / `410` |
+| `GET` | `/api/v1/redirect/{shortCode}` | Resolve a short code for the frontend | `200` + `{ "originalUrl": "..." }` |
 
-1. Controller methods are annotated with `@RateLimit(operation = RateLimitOperation.CREATE)`.
-2. `RateLimitAspect` intercepts the call **before** it reaches the controller, extracts the authenticated user's ID, and queries the Redis rate limiter.
-3. `RateLimiterService` executes an atomic Lua script against Redis that implements the Token Bucket algorithm — checking tokens, refilling based on elapsed time, and decrementing atomically in a single round-trip.
-4. If the bucket is empty, a `RateLimitExceededException` is thrown and caught by `GlobalExceptionHandler`, which returns `429` with a `Retry-After` header.
-5. If Redis is unreachable, the limiter **fails open** to avoid blocking legitimate users.
+Email verification and password-reset tokens expire after 15 minutes. Reset tokens are single-use, and resetting a password revokes the user’s existing JWTs.
 
-### Click Count Write-Behind
+### Protected URL and account endpoints
 
-Instead of issuing a database `UPDATE` on every redirect, clicks are accumulated in a Redis hash (`url:clicks:active`). A scheduled `ClickCountFlushWorker` runs every 5 seconds:
+| Method | Endpoint | Purpose | Success |
+| --- | --- | --- | --- |
+| `POST` | `/api/v1/urls` | Create or reuse a shortened URL | `201` + URL ID, original URL, short code |
+| `GET` | `/api/v1/urls?page=0&size=20` | List the signed-in user’s library | `200` + `{ "urls": [...] }` |
+| `GET` | `/api/v1/urls/{urlId}` | Read one library entry | `200` |
+| `PATCH` | `/api/v1/urls/{urlId}` | Set status to `ACTIVE` or `DISABLED` | `200` |
+| `DELETE` | `/api/v1/urls` | Remove a URL from the current user’s library | `204` |
+| `DELETE` | `/api/v1/users/me` | Permanently delete the account and its library associations | `204` |
 
-1. Atomically renames the active hash to a flush-specific key (preventing data loss).
-2. Reads all accumulated counts from the flush key.
-3. Batch-updates PostgreSQL in a single `batchUpdate` call.
-4. Deletes the flush key from Redis.
+Creating a URL requires a verified email. Removing a URL from a library does not necessarily delete the shared shortened URL, so the public code may continue to exist for other owners.
 
-## Requirements
+### URL response shape
 
-- **JDK 25**
-- **Docker** and **Docker Compose**
-- **Node.js** (for running the load test scripts)
-- **k6** (optional, for heavy concurrency pool stress tests)
+Library entries contain the fields used by the dashboard:
 
-## Getting Started
-
-### 1. Clone and Configure
-
-```bash
-git clone https://github.com/AryanPatel-18/url-shortner.git
-cd url-shortner
-cp .env.example .env
+```json
+{
+  "id": "8c6d6a5a-8a6e-4d84-8f0f-4b7a4f1c9f5b",
+  "originalUrl": "https://example.com/article",
+  "shortCode": "Ab3dE91xQ",
+  "status": "ACTIVE",
+  "clickCount": 12,
+  "createdAt": "2026-09-30T10:00:00",
+  "updatedAt": "2026-09-30T10:00:00"
+}
 ```
 
-Edit `.env` with your credentials:
+Create requests accept absolute `http://` or `https://` URLs up to 2,048 characters. List requests use zero-based pages with a default size of 20 and a maximum size of 20.
+
+### Errors and rate limits
+
+Domain and validation errors use this shape:
+
+```json
+{
+  "status": 400,
+  "message": "originalUrl: URL must start with http:// or https://",
+  "timestamp": "2026-09-30T10:00:00"
+}
+```
+
+| Status | Meaning |
+| --- | --- |
+| `400` | Invalid body, UUID, enum, URL, or pagination input |
+| `401` | Missing, invalid, expired, or revoked JWT; invalid Google token; invalid credentials |
+| `403` | Local account email has not been verified |
+| `404` | User, short URL, or user-library association was not found |
+| `409` | Email already registered or email already verified |
+| `410` | Short code exists but is disabled |
+| `429` | Rate limit exceeded; response includes `Retry-After` and an empty body |
+| `500` | Email delivery or unexpected server failure |
+
+Rate limiting uses a token bucket. The `capacity` is the initial burst allowance and `refill-interval` is the number of seconds between new tokens; this is not a fixed calendar-minute window.
+
+| Operation | Capacity | Refill interval |
+| --- | ---: | ---: |
+| Create URL | 10 | 6 seconds |
+| Update URL | 30 | 2 seconds |
+| Delete URL | 30 | 2 seconds |
+| List URLs | 60 | 1 second |
+| Get URL | 60 | 1 second |
+| Resend verification | 3 | 60 seconds |
+| Forgot password | 3 | 3,600 seconds |
+| Reset password | 5 | 3,600 seconds |
+| Google login | 5 | 60,000 seconds |
+
+Protected URL operations are keyed by user ID. Public authentication operations are keyed by the client IP address. Redis failures fail open for rate limiting, and click-count writes fall back to a direct database increment when Redis is unavailable.
+
+## Getting started
+
+### Prerequisites
+
+- JDK 25
+- Docker and Docker Compose
+- Node.js `20.19+` or `22.12+` for the Vite 8 frontend
+- A Brevo account/API key for verification and reset emails
+- A Google OAuth web client ID if Google sign-in is enabled
+
+### 1. Configure the backend
+
+From `url-shortner/`, create a `.env` file. The application’s dotenv loader reads these values at startup:
 
 ```dotenv
 POSTGRES_DB=url_shortener
 POSTGRES_USER=postgres
-POSTGRES_PASSWORD=your_password
-
+POSTGRES_PASSWORD=change-me
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5432
 
 REDIS_HOST=localhost
 REDIS_PORT=6379
+REDIS_PASSWORD=
 
-JWT_SECRET=your_secret_key
-JWT_EXPIRATION=10000
+# Base64-encoded signing key; use a strong 256-bit-or-longer secret.
+JWT_SECRET=base64-encoded-secret
+# Milliseconds; 86400000 is 24 hours.
+JWT_EXPIRATION=86400000
+
+BREVO_API_KEY=your-brevo-api-key
+SENDER_EMAIL=no-reply@example.com
+SENDER_NAME=URLZS
+
+APP_BASE_URL=http://localhost:8080
+FRONTEND_URL=http://localhost:5173
+GOOGLE_CLIENT_ID=your-google-web-client-id
 ```
 
-### 2. Start Infrastructure
+`BREVO_API_KEY`, sender values, and `GOOGLE_CLIENT_ID` are required by the current backend configuration even when those flows are not being used. Keep `.env` out of version control.
+
+The bundled Compose Redis service is local, non-TLS Redis, while the application property enables TLS for hosted Redis. For local development, override that property when starting Spring Boot:
+
+```bash
+SPRING_DATA_REDIS_SSL_ENABLED=false ./mvnw spring-boot:run
+```
+
+On Windows PowerShell, use `./mvnw.cmd spring-boot:run` after setting the same Spring environment override in the shell.
+
+### 2. Start PostgreSQL and Redis
 
 ```bash
 docker compose up -d
+docker compose ps
 ```
 
-### 3. Run the Application
+Flyway applies migrations `V1` through `V5` automatically when the application starts.
+
+### 3. Run the backend
 
 ```bash
-.\mvnw spring-boot:run
+# The bundled Docker Redis instance is non-TLS.
+SPRING_DATA_REDIS_SSL_ENABLED=false ./mvnw spring-boot:run
 ```
 
-### 4. Run Tests
+The API listens on `http://localhost:8080` by default. The local CORS allowlist includes `http://localhost:5173` and `http://127.0.0.1:5173`.
+
+### 4. Run the frontend
+
+In a second terminal:
 
 ```bash
-.\mvnw clean test
+cd ../Frontend/frontend
+npm install
 ```
 
-## Example API Requests
+Create `Frontend/frontend/.env.local`:
 
-**Register a user:**
+```dotenv
+VITE_API_BASE_URL=http://localhost:8080
+VITE_PUBLIC_URL=http://localhost:8080
+VITE_GOOGLE_CLIENT_ID=your-google-web-client-id
+```
+
+`VITE_PUBLIC_URL` controls the host used for displayed short links. Point it at the frontend host if the frontend is serving short-code routes, or at the backend host for direct `302` redirects. `VITE_GOOGLE_CLIENT_ID` must match the backend’s `GOOGLE_CLIENT_ID`. Do not put database, Redis, Brevo, or JWT secrets in Vite variables: all `VITE_*` values are public in the built client.
+
+Start the Vite development server:
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/users/register \
-  -H "Content-Type: application/json" \
-  -d '{"email":"user@example.com","password":"secure-password"}'
+npm run dev
 ```
 
-**Login and get a JWT:**
+Open the printed URL, normally `http://localhost:5173`.
+
+### Production frontend configuration
+
+The deployed client is configured around:
+
+```dotenv
+VITE_API_BASE_URL=https://api.urlzs.xyz
+VITE_PUBLIC_URL=https://urlzs.xyz
+VITE_GOOGLE_CLIENT_ID=your-google-web-client-id
+```
+
+Google OAuth must allow the frontend origin. The backend CORS configuration explicitly allows `https://urlzs.xyz`, `https://www.urlzs.xyz`, `http://localhost:5173`, and `http://127.0.0.1:5173`.
+
+## Useful commands
+
+### Backend
+
+| Command | Purpose |
+| --- | --- |
+| `make up` | Start PostgreSQL and Redis |
+| `make down` | Stop the containers |
+| `make restart` | Restart the containers |
+| `make logs` | Follow container logs |
+| `make ps` | Show Compose status |
+| `make health` | Show all Docker container status |
+| `make build` | Run `mvnw clean package` |
+| `make test` | Run the Maven test suite |
+| `make clean` | Remove Maven build artifacts |
+| `make shell` | Open a `psql` shell in PostgreSQL |
+
+Or run the Maven commands directly:
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/users/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"user@example.com","password":"secure-password"}'
+./mvnw clean test
+./mvnw clean package
 ```
 
-**Create a shortened URL:**
+### Frontend
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/urls \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <your-jwt-token>" \
-  -d '{"originalUrl":"https://example.com/a-very-long-url-to-shorten"}'
+npm run dev      # Vite development server
+npm run lint     # oxlint
+npm run build    # production bundle in dist/
+npm run preview  # preview the production bundle locally
 ```
 
-**List your URLs (paginated):**
+## Monitoring
 
-```bash
-curl http://localhost:8080/api/v1/urls?page=0&size=10 \
-  -H "Authorization: Bearer <your-jwt-token>"
-```
+The backend exposes the following Actuator endpoints:
 
-**Get a single URL:**
+- `GET /actuator/health`
+- `GET /actuator/metrics`
 
-```bash
-curl http://localhost:8080/api/v1/urls/<url-id> \
-  -H "Authorization: Bearer <your-jwt-token>"
-```
+Only health and metrics are exposed through the Actuator web layer by default.
 
-**Update URL status:**
+## Security notes
 
-```bash
-curl -X PATCH http://localhost:8080/api/v1/urls/<url-id> \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <your-jwt-token>" \
-  -d '{"status":"DISABLED"}'
-```
-
-**Delete a URL from your library:**
-
-```bash
-curl -X DELETE http://localhost:8080/api/v1/urls \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <your-jwt-token>" \
-  -d '{"urlId":"<url-id>"}'
-```
-
-**Visit a short link:**
-
-```bash
-curl -i http://localhost:8080/<short-code>
-```
-
-## Make Targets
-
-| Command | Description |
-| :--- | :--- |
-| `make up` | Start PostgreSQL and Redis containers |
-| `make down` | Stop containers |
-| `make restart` | Restart containers |
-| `make logs` | Tail container logs |
-| `make ps` | Show container status |
-| `make build` | Build the project (`mvnw clean package`) |
-| `make test` | Run tests (`mvnw test`) |
-| `make clean` | Clean build artifacts (`mvnw clean`) |
-| `make shell` | Open a psql shell inside the PostgreSQL container |
-
-## Load Testing
-
-The project includes a comprehensive load testing suite in the `load-tests/` directory (gitignored):
-
-- **`functional-test.js`** — End-to-end sequential test covering the full user journey: Register → Login → Create → List → Get → Redirect → Update → Delete.
-- **`rate-limit-tests/run-all-endpoints.js`** — Verifies that the Token Bucket rate limiter enforces exact capacity limits on all 5 protected endpoints.
-- **`pool-stress/`** — k6 scripts that simulate up to 200 concurrent users to stress-test the HikariCP connection pool under extreme load.
-
-The application has been verified to handle **1.1 million+ requests** without a single database connection error or 500-level failure, thanks to the AOP rate limiter rejecting excess traffic before it reaches the database layer.
+- Passwords are stored with BCrypt; raw passwords are never returned by the API.
+- JWTs are sent from the frontend through the `Authorization` header and stored in browser local storage for the current client session.
+- Email and password-reset tokens are stored in Redis with 15-minute TTLs.
+- Password reset invalidates existing JWTs for that user.
+- CORS uses an explicit origin allowlist and does not enable credentialed cookies.
+- Never commit `.env`, JWT signing keys, database credentials, Redis credentials, or email-provider keys.
 
 ## License
 
