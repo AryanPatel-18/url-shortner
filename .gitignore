@@ -45,5 +45,9 @@ Thumbs.db
 
 results
 load-tests
-explanation.mdrun-all-tests.ps1
+explanation.md
+run-all-tests.ps1
 run-all-tests.bat
+
+Scratch.java
+spring-web-src/
