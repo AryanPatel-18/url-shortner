@@ -18,7 +18,7 @@
   <img src="https://img.shields.io/badge/Redis-powered-DC382D?logo=redis&logoColor=white" alt="Redis powered" />
 </p>
 
-URLZS turns long links into compact, shareable URLs and gives each account a simple place to create, organize, monitor, and disable them. The backend is built to keep the redirect path fast while the frontend keeps the everyday workflow clear and approachable.
+URLZS turns long links into compact, shareable URLs and gives each account a simple place to create, organize, monitor, and disable them.
 
 ## What makes it useful
 
