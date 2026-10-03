@@ -11,4 +11,5 @@ public interface IJwtService {
     UUID extractUserId(String token);
     boolean isTokenValid(String token);
     Date extractIssuedAt(String token);
+    String extractRole(String token);
 }

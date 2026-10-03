@@ -1,5 +1,6 @@
 package com.aryan.url_shortner.service.security;
 
+import com.aryan.url_shortner.enums.Role;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -16,6 +17,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.UUID;
 
 @Component
@@ -41,7 +43,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (jwtService.isTokenValid(token)) {
 
                 UUID userId = jwtService.extractUserId(token);
-                java.util.Date iat = jwtService.extractIssuedAt(token);
+                Date iat = jwtService.extractIssuedAt(token);
+                String roleStr = jwtService.extractRole(token);
+                Role role;
+
+                if (roleStr == null || roleStr.isBlank()) {
+                    role = Role.USER;
+                } else {
+                    try {
+                        role = Role.valueOf(roleStr);
+                    } catch (IllegalArgumentException e) {
+                        role = Role.USER;
+                    }
+                }
 
                 String revokedTimestampStr = redisTemplate.opsForValue().get("user:jwt_revoked_before:" + userId);
                 if (revokedTimestampStr != null) {
@@ -52,7 +66,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 }
 
                 String email = jwtService.extractUsername(token);
-                UsernamePasswordAuthenticationToken authentication = getAuthentication(userId, email);
+                UsernamePasswordAuthenticationToken authentication = getAuthentication(userId, email, role);
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             } else {
                 throw new JwtException("Token is expired or invalid");
@@ -73,10 +87,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         );
     }
 
-    private static @NonNull UsernamePasswordAuthenticationToken getAuthentication(UUID userId, String email) {
+    private static @NonNull UsernamePasswordAuthenticationToken getAuthentication(UUID userId, String email, Role role) {
         com.aryan.url_shortner.model.User user = new com.aryan.url_shortner.model.User();
+
         user.setId(userId);
         user.setEmail(email);
+        user.setRole(role);
+
         com.aryan.url_shortner.model.CustomUserDetails userDetails =
                 new com.aryan.url_shortner.model.CustomUserDetails(user);
         return new UsernamePasswordAuthenticationToken(

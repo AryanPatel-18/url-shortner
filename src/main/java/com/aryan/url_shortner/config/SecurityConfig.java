@@ -60,6 +60,7 @@ public class SecurityConfig {
                                 "/api/" + apiVersion + "/users/forgot-password",
                                 "/api/" + apiVersion + "/users/reset-password"
                         ).permitAll()
+                        .requestMatchers("/api/" + apiVersion + "/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session ->

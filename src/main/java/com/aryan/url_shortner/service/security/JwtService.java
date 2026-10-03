@@ -1,5 +1,6 @@
 package com.aryan.url_shortner.service.security;
 
+import com.aryan.url_shortner.model.CustomUserDetails;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
@@ -23,12 +24,12 @@ public class JwtService implements IJwtService{
 
     @Override
     public String generateToken(UserDetails userDetails) {
-        // Cast to our custom implementation to get access to the User object
-        com.aryan.url_shortner.model.CustomUserDetails customUser =
-                (com.aryan.url_shortner.model.CustomUserDetails) userDetails;
+        CustomUserDetails customUser =
+                (CustomUserDetails) userDetails;
         return Jwts.builder()
                 .subject(userDetails.getUsername())
                 .claim("userId", customUser.getUser().getId().toString())
+                .claim("role", customUser.getUser().getRole().name())
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + jwtExpiration))
                 .signWith(getSigningKey())
@@ -67,6 +68,11 @@ public class JwtService implements IJwtService{
     @Override
     public Date extractIssuedAt(String token) {
         return extractAllClaims(token).getIssuedAt();
+    }
+
+    @Override
+    public String extractRole(String token) {
+        return extractAllClaims(token).get("role", String.class);
     }
 
     private boolean isTokenExpired(String token) {

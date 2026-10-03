@@ -1,6 +1,7 @@
 package com.aryan.url_shortner.model;
 
 import com.aryan.url_shortner.enums.AuthProvider;
+import com.aryan.url_shortner.enums.Role;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -41,6 +42,10 @@ public class User {
 
     @Column(nullable = false)
     private boolean emailVerified = true;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private Role role = Role.USER;
 
     @PrePersist
     protected void onCreate() {
