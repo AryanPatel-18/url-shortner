@@ -1,5 +1,6 @@
 package com.aryan.url_shortner.controller;
 
+import com.aryan.url_shortner.dto.AdminBusinessStatisticsResponse;
 import com.aryan.url_shortner.dto.AdminTestResponse;
 import com.aryan.url_shortner.service.admin.IAdminService;
 import lombok.RequiredArgsConstructor;
@@ -18,5 +19,10 @@ public class AdminController {
 
     public ResponseEntity<AdminTestResponse> adminTest() {
         return ResponseEntity.ok(adminService.getTestStatus());
+    }
+
+    @GetMapping("/business")
+    public ResponseEntity<AdminBusinessStatisticsResponse> getBusinessStatistics() {
+        return ResponseEntity.ok(adminService.getBusinessStatistics());
     }
 }
