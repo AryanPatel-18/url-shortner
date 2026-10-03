@@ -61,6 +61,7 @@ public class SecurityConfig {
                                 "/api/" + apiVersion + "/users/reset-password"
                         ).permitAll()
                         .requestMatchers("/api/" + apiVersion + "/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/actuator/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session ->
