@@ -5,6 +5,7 @@ import com.aryan.url_shortner.enums.UrlStatus;
 import com.aryan.url_shortner.exceptions.ShortenedUrlNotFoundException;
 import com.aryan.url_shortner.model.ShortenedUrl;
 import com.aryan.url_shortner.repository.ShortenedUrlRepository;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -24,6 +25,7 @@ public class ShortenedUrlService implements IShortenedUrlService{
     private static final int MAX_COLLISION_RETRIES = 5;
     private final ShortenedUrlRepository shortenedUrlRepository;
     private final StringRedisTemplate redisTemplate;
+    private final MeterRegistry meterRegistry;
     private static final String ACTIVE_KEY = "url:clicks:active";
 
     @Override
@@ -60,6 +62,9 @@ public class ShortenedUrlService implements IShortenedUrlService{
         String cachedValue = redisTemplate.opsForValue().get(key);
 
         if (cachedValue != null) {
+
+            meterRegistry.counter("redirect.cache.hits").increment();
+
             try {
                 String[] parts = cachedValue.split(":::", 3);
 
@@ -74,6 +79,7 @@ public class ShortenedUrlService implements IShortenedUrlService{
                 // Invalid cache entry. Fall back to database.
             }
         }
+        meterRegistry.counter("redirect.cache.misses").increment();
 
         ShortenedUrl shortenedUrl =
                 shortenedUrlRepository.findByShortCode(shortCode)
