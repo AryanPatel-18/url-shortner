@@ -61,12 +61,13 @@ public class SecurityConfig {
                                 "/api/" + apiVersion + "/users/reset-password"
                         ).permitAll()
                         .requestMatchers("/api/" + apiVersion + "/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/actuator/**").hasRole("ADMIN")
+                        .requestMatchers("/api/" + apiVersion + "/actuator/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
+                .httpBasic(org.springframework.security.config.Customizer.withDefaults())
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(customAuthenticationEntryPoint)
                 );
