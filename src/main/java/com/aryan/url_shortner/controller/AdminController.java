@@ -1,10 +1,12 @@
 package com.aryan.url_shortner.controller;
 
 import com.aryan.url_shortner.dto.AdminBusinessStatisticsResponse;
+import com.aryan.url_shortner.dto.AdminDashboardResponse;
 import com.aryan.url_shortner.dto.AdminTestResponse;
 import com.aryan.url_shortner.dto.InfrastructureMetricsResponse;
 import com.aryan.url_shortner.dto.SystemMetricsResponse;
 import com.aryan.url_shortner.service.admin.IAdminService;
+import com.aryan.url_shortner.service.admin.IDashboardAdminService;
 import com.aryan.url_shortner.service.admin.IInfrastructureAdminService;
 import com.aryan.url_shortner.service.admin.ISystemAdminService;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +23,7 @@ public class AdminController {
     private final ISystemAdminService systemAdminService;
     private final IAdminService adminService;
     private final IInfrastructureAdminService infrastructureAdminService;
+    private final IDashboardAdminService dashboardAdminService;
 
     @GetMapping("/test")
 
@@ -41,6 +44,11 @@ public class AdminController {
     @GetMapping("/infrastructure")
     public ResponseEntity<InfrastructureMetricsResponse> getInfrastructureMetrics() {
         return ResponseEntity.ok(infrastructureAdminService.getInfrastructureMetrics());
+    }
+
+    @GetMapping("/dashboard")
+    public ResponseEntity<AdminDashboardResponse> getDashboard() {
+        return ResponseEntity.ok(dashboardAdminService.getDashboard());
     }
 
 }
